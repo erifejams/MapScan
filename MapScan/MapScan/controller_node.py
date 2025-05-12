@@ -32,7 +32,7 @@ from imutils.video import VideoStream
 import argparse
 import imutils
 import time
-import cv2
+
 
 
 
@@ -106,84 +106,83 @@ class ControllerNode(Node):
         ]
 
 
+
+        self.ARUCO_DICT = {
+            "DICT_4X4_50": cv2.aruco.DICT_4X4_50,
+            "DICT_4X4_100": cv2.aruco.DICT_4X4_100,
+            "DICT_4X4_250": cv2.aruco.DICT_4X4_250,
+            "DICT_4X4_1000": cv2.aruco.DICT_4X4_1000,
+            "DICT_5X5_50": cv2.aruco.DICT_5X5_50,
+            "DICT_5X5_100": cv2.aruco.DICT_5X5_100,
+            "DICT_5X5_250": cv2.aruco.DICT_5X5_250,
+            "DICT_5X5_1000": cv2.aruco.DICT_5X5_1000,
+            "DICT_6X6_50": cv2.aruco.DICT_6X6_50,
+            "DICT_6X6_100": cv2.aruco.DICT_6X6_100,
+            "DICT_6X6_250": cv2.aruco.DICT_6X6_250,
+            "DICT_6X6_1000": cv2.aruco.DICT_6X6_1000,
+            "DICT_7X7_50": cv2.aruco.DICT_7X7_50,
+            "DICT_7X7_100": cv2.aruco.DICT_7X7_100,
+            "DICT_7X7_250": cv2.aruco.DICT_7X7_250,
+            "DICT_7X7_1000": cv2.aruco.DICT_7X7_1000,
+            "DICT_ARUCO_ORIGINAL": cv2.aruco.DICT_ARUCO_ORIGINAL,
+        #	"DICT_APRILTAG_16h5": cv2.aruco.DICT_APRILTAG_16h5,
+        #	"DICT_APRILTAG_25h9": cv2.aruco.DICT_APRILTAG_25h9,
+        #	"DICT_APRILTAG_36h10": cv2.aruco.DICT_APRILTAG_36h10,
+        #	"DICT_APRILTAG_36h11": cv2.aruco.DICT_APRILTAG_36h11
+        }
+
     def image_callback(self, data):
-        #got the video code from here https://pyimagesearch.com/2020/12/21/detecting-aruco-markers-with-opencv-and-python/
-
-        #readVid = cv2.VideoCapture(src=data).start()
+    
         self.cv_image = self.bridge.imgmsg_to_cv2(data, "bgr8")
-        cv2.imshow("Thymio Camera", self.cv_image)
-        cv2.waitKey(1)
-        time.sleep(10.0)
+        image = cv2.cvtColor(self.cv_image, cv2.COLOR_BGR2GRAY)
 
-        # initialize the video stream and allow the camera sensor to warm up
-        self.get_logger().info("[INFO] starting video stream...")
-        #readVid = cv2.VideoCapture(src=data).start()
-        if self.cv_image is None:
-            return
-
-        cv2.namedWindow('Image window')
-
-        cv2.imshow("Image window", self.cv_image)
-        self.get_logger().info("showing the robot camera")
-
-        # dictionary = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_ARUCO_ORIGINAL)
-        # parameters =  cv2.aruco.DetectorParameters()
-        # detector = cv2.aruco.ArucoDetector(dictionary, parameters)
-        #self.get_logger().info("after dictionary")
+        for (arucoName, arucoDict) in self.ARUCO_DICT.items():
+            arucoDict = cv2.aruco.getPredefinedDictionary(arucoDict)
+            arucoParams = cv2.aruco.DetectorParameters()
 
 
-        #frame = self.vs.read() - a mistake was using this
-        # loop over the frames from the video stream
-        while True:
+            detector = cv2.aruco.ArucoDetector(arucoDict, arucoParams)
 
+            # Detect markers
+            corners, ids, rejected = detector.detectMarkers(image)
 
-            # grab the frame from the threaded video stream and resize it
-            # to have a maximum width of 1000 pixels
-            self.get_logger().info("going to the frame detection")
-            #self.publisher_.publish(self.br.cv2_to_imgmsg(self.cv_image, "bgr8"))
-            #ret, frame = self.vs.read()
-            cv2.imshow("Image window", self.cv_image)
-            cv2.waitKey(1)
-            time.sleep(5.0)
-            #frame = cv2.imread(self.cv_image)
-            #frame = self.bridge.imgmsg_to_cv2(self.cv_image, "bgr8")
-            #frame = cv2.resize(self.cv_image, width=1000)
-            cv2.imshow("Thymio Camera", self.cv_image)
-            cv2.waitKey(1)
-            time.sleep(5.0)
+            # verify *at least* one ArUco marker was detected
+            if len(corners) > 0:
+                # flatten the ArUco IDs list
+                ids = ids.flatten()
 
-            if self.cv_image: #- casused problems so remove it
-                self.get_logger().info("detecting aruco markers")
-                (corners, ids, rejected) = cv2.aruco.detectMarkers(self.cv_image,
-                    cv2.aruco.DICT_ARUCO_ORIGINAL)
-                
-                # verify *at least* one ArUco marker was detected
-                if len(corners) > 0:
-                    # flatten the ArUco IDs list
-                    ids = ids.flatten()
-                    # loop over the detected ArUCo corners
-                    for (markerCorner, markerID) in zip(corners, ids):
-                        self.get_logger().info("adjusting the marker")
-                        # extract the marker corners (which are always returned
-                        # in top-left, top-right, bottom-right, and bottom-left
-                        # order)
-                        corners = markerCorner.reshape((4, 2))
-                        (topLeft, topRight, bottomRight, bottomLeft) = corners
-                        # convert each of the (x, y)-coordinate pairs to integers
-                        topRight = (int(topRight[0]), int(topRight[1]))
-                        bottomRight = (int(bottomRight[0]), int(bottomRight[1]))
-                        bottomLeft = (int(bottomLeft[0]), int(bottomLeft[1]))
-                        topLeft = (int(topLeft[0]), int(topLeft[1]))
-                        cv2.imshow("Camera", self.cv_image)
-                        cv2.waitKey(1)
-                        time.sleep(10.0) 
+                # loop over the detected ArUCo corners
+                for (markerCorner, markerID) in zip(corners, ids):
+                    # extract the marker corners (which are always returned in
+                    # top-left, top-right, bottom-right, and bottom-left order)
+                    corners = markerCorner.reshape((4, 2))
+                    (topLeft, topRight, bottomRight, bottomLeft) = corners
 
+                    # convert each of the (x, y)-coordinate pairs to integers
+                    topRight = (int(topRight[0]), int(topRight[1]))
+                    bottomRight = (int(bottomRight[0]), int(bottomRight[1]))
+                    bottomLeft = (int(bottomLeft[0]), int(bottomLeft[1]))
+                    topLeft = (int(topLeft[0]), int(topLeft[1]))
 
-            # Break the loop when user hits 'esc' key
-            if cv2.waitKey(20) & 0xFF == 27:
-                break
+                    # draw the bounding box of the ArUCo detection
+                    cv2.line(image, topLeft, topRight, (0, 255, 0), 2)
+                    cv2.line(image, topRight, bottomRight, (0, 255, 0), 2)
+                    cv2.line(image, bottomRight, bottomLeft, (0, 255, 0), 2)
+                    cv2.line(image, bottomLeft, topLeft, (0, 255, 0), 2)
 
-        cv2.destroyAllWindows()
+                    # compute and draw the center (x, y)-coordinates of the ArUco
+                    # marker
+                    cX = int((topLeft[0] + bottomRight[0]) / 2.0)
+                    cY = int((topLeft[1] + bottomRight[1]) / 2.0)
+                    cv2.circle(image, (cX, cY), 4, (0, 0, 255), -1)
+
+                    # draw the ArUco marker ID on the image
+                    cv2.putText(image, str(markerID),
+                        (topLeft[0], topLeft[1] - 15), cv2.FONT_HERSHEY_SIMPLEX,
+                        0.5, (0, 255, 0), 2)
+                    print("[INFO] ArUco marker ID: {}".format(markerID))
+                    self.get_logger().info("[INFO] ArUco marker ID: {}".format(markerID))
+
 
 
 
