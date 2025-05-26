@@ -5,6 +5,7 @@
 • CoppeliaSim and the simulated MyT <br>
 • ROS2 <br>
 • Linux <br>
+• Pytorch<br>
 
 
 # Project Description
