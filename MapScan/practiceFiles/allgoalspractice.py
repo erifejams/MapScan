@@ -10,6 +10,8 @@ Original file is located at
 !pip3 install cairosvg
 !pip install apriltag
 
+!pip install pyrealsense2 open3d
+
 """<br><br>
 ### **Aruco Markers**
 <br><br>
@@ -24,36 +26,13 @@ import imutils
 import sys
 import cv2.aruco as aruco
 import numpy as np
-
-# this is to generate the code the code with the white background for the canvas
-
-marker_id = 23
-marker_size = 200
-canvas_size = 600  # total size of the white background
-
-
-aruco_dict = aruco.getPredefinedDictionary(aruco.DICT_4X4_50)
-marker = aruco.generateImageMarker(aruco_dict, marker_id, marker_size)
-
-canvas = 255 * np.ones((canvas_size, canvas_size), dtype=np.uint8)
-
-
-start_x = (canvas_size - marker_size) // 2
-start_y = (canvas_size - marker_size) // 2
-
-canvas[start_y:start_y+marker_size, start_x:start_x+marker_size] = marker
-
-
-cv2.imwrite(f"aruco_marker_id{marker_id}_white_background.png", canvas)
-
-rm -rf arucoImgs
+import os
+import random
 
 # need the eedit the code above to this, so that it generates different aruco
 # of different sizes on white canvas
 # https://github.com/KhairulIzwan/ArUco-markers-with-OpenCV-and-Python/blob/main/Generating%20ArUco%20markers/opencv_generate_aruco.py
 
-import os
-import random
 
 
 canvas_size = 600
@@ -192,11 +171,6 @@ cv2_imshow(image)
 <br><br>
 ### **3D Reconstruction**
 <br><br>"""
-
-!pip install pyrealsense2 open3d
-
-pip install torch torchvision torchaudio
-pip install transformers
 
 import matplotlib
 from matplotlib import pyplot as plt
@@ -379,38 +353,16 @@ o3d.visualization.draw_plotly([dec_mesh])
 
 o3d.io.write_triangle_mesh("bpa_mesh.ply", dec_mesh)
 
-import cv2
-from PIL import Image
-import numpy as np
-import matplotlib
-from matplotlib import pyplot as plt
-
 """<br><br>
 ### **Room Mapping**
 <br><br>
 """
 
-image_pil = Image.open('sam.png')
-# Convert PIL image to NumPy array for OpenCV
-image = cv2.cvtColor(np.array(image_pil), cv2.COLOR_RGB2BGR) #
-
-# Initialize the ORB detector with 5k keypoints
-orb = cv2.ORB_create(nfeatures=5000)
-
-# Detect keypoints and compute descriptors
-keypoints1, descriptors1 = orb.detectAndCompute(image, None)
-
-# Detect keypoints and compute descriptors for the second image
-keypoints2, descriptors2 = orb.detectAndCompute(image, None)
-
-# Initialize the BFMatcher with default params
-bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
-
-# Match descriptors between frame I and frame I+1
-matches = bf.match(descriptors1, descriptors2)
-
-# Sort matches by distance (best matches first)
-matches = sorted(matches, key=lambda x: x.distance)
+import cv2
+from PIL import Image
+import numpy as np
+import matplotlib
+from matplotlib import pyplot as plt
 
 image1 = cv2.imread('sam.png', cv2.IMREAD_GRAYSCALE)
 
