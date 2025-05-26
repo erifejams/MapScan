@@ -419,6 +419,11 @@ class ControllerNode(Node):
             self.get_logger().info("image is none")
             return 
         self.get_logger().info("the image is not none, reconstruction starting")
+
+        cmd_vel = Twist() 
+        self.vel_publisher.publish(cmd_vel)
+        cmd_vel = Twist() 
+        self.vel_publisher_two.publish(cmd_vel)
         
             
         self.cv_image = self.bridge_two.imgmsg_to_cv2(self.store_image, "bgr8")
@@ -484,6 +489,11 @@ class ControllerNode(Node):
             cy=cy
         )
 
+        
+        cmd_vel = Twist() 
+        self.vel_publisher.publish(cmd_vel)
+        cmd_vel = Twist() 
+        self.vel_publisher_two.publish(cmd_vel)
 
 
         # Create the point cloud from the depth image
