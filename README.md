@@ -40,7 +40,7 @@ Goal Two: When the specific item is found, another mighty thymio creates a 3D re
 
 
 ## Terminal #4:
-### To run the compulsary.launch.xml (for task 3):
+### To run the compulsary.launch.xml:
 •	cd ~/dev_ws/MapScan<br>
 • source ~/dev_ws/install/setup.bash <br>
 • ros2 launch MapScan controller.launch.xml thymio_name:=thymio_0 thymio_name_two:=thymio_1<br>
