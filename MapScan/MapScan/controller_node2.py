@@ -1,6 +1,3 @@
-###used this to store the threads version of doing this code 
-###used threads so that it could work all together 
-
 
 import rclpy
 from rclpy.node import Node
@@ -10,7 +7,7 @@ import tf_transformations
 from MapScan.pid import PID
 
 
-from geometry_msgs.msg import Twist, Pose
+from geometry_msgs.msg import Twist, Pose, Pose2D
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import Range, Image
 
@@ -28,10 +25,11 @@ import cv2
 import pandas as pd
 from threading import Thread
 
-from imutils.video import VideoStream
+
 import argparse
 import imutils
 import time
+
 
 import matplotlib
 from matplotlib import pyplot as plt
@@ -45,7 +43,6 @@ import cv2
 
 
 
-
 class ThymioState(Enum):
     # Initially, move straight until the robot reaches an obstacle
     FORWARD = 1
@@ -55,7 +52,8 @@ class ThymioState(Enum):
     ROTATING = 3
 
 
-
+##sensor
+from sensor_msgs.msg import Range #use to get one range reading of the distance measured 
 
 class ControllerNode(Node):
     def __init__(self):
@@ -66,7 +64,6 @@ class ControllerNode(Node):
         self.odom_velocity = None
         self.rightProximity = None
         self.cv_image = None
-
         self.stop_robot_two = False
 
         self.odom_subscriber_two = None 
@@ -75,7 +72,7 @@ class ControllerNode(Node):
         self.thymio_two_pose = None
         self.distance = 0
         self.angular_diff = 0
-        self.store_image = None
+
 
         # Period of the update timer, set based on update frequencies of proximity sensors (10Hz) and odom (20Hz)
         self.UPDATE_STEP = 1/20
@@ -103,17 +100,13 @@ class ControllerNode(Node):
         # self.odom_callback every time a message is received
         self.odom_subscriber = self.create_subscription(Odometry, '/thymio_0/odom', self.odom_callback, 10)
 
-        ##this is the subscriber for the camera for the robot
-        self.camera_subscriber = self.create_subscription(Image, '/thymio_0/camera', self.image_callback, 10)
-        self.bridge = CvBridge()
 
         ##for the second mighty thymio
         self.vel_publisher_two = self.create_publisher(Twist, '/thymio_1/cmd_vel', 10)
         self.odom_subscriber_two = self.create_subscription(Odometry, '/thymio_1/odom', self.odom_callback_two, 10)
-        self.camera_subscriber_two = self.create_subscription(Image, '/thymio_1/camera', self.store_data_img_callback_two, 10)
+        self.camera_subscriber_two = self.create_subscription(Image, '/thymio_1/camera', self.image_callback_two, 10)
         self.bridge_two = CvBridge()
     
-   
 
         # Initialize the state machine
         self.current_state = None
@@ -132,67 +125,6 @@ class ControllerNode(Node):
 
 
 
-        self.ARUCO_DICT = {
-            "DICT_4X4_50": cv2.aruco.DICT_4X4_50,
-            "DICT_4X4_100": cv2.aruco.DICT_4X4_100,
-            "DICT_4X4_250": cv2.aruco.DICT_4X4_250,
-            "DICT_4X4_1000": cv2.aruco.DICT_4X4_1000,
-            "DICT_5X5_50": cv2.aruco.DICT_5X5_50,
-            "DICT_5X5_100": cv2.aruco.DICT_5X5_100,
-            "DICT_5X5_250": cv2.aruco.DICT_5X5_250,
-            "DICT_5X5_1000": cv2.aruco.DICT_5X5_1000,
-            "DICT_6X6_50": cv2.aruco.DICT_6X6_50,
-            "DICT_6X6_100": cv2.aruco.DICT_6X6_100,
-            "DICT_6X6_250": cv2.aruco.DICT_6X6_250,
-            "DICT_6X6_1000": cv2.aruco.DICT_6X6_1000,
-            "DICT_7X7_50": cv2.aruco.DICT_7X7_50,
-            "DICT_7X7_100": cv2.aruco.DICT_7X7_100,
-            "DICT_7X7_250": cv2.aruco.DICT_7X7_250,
-            "DICT_7X7_1000": cv2.aruco.DICT_7X7_1000,
-            "DICT_ARUCO_ORIGINAL": cv2.aruco.DICT_ARUCO_ORIGINAL
-        }
-
-    def image_callback(self, data):
-    
-        self.cv_image = self.bridge.imgmsg_to_cv2(data, "bgr8")
-        image = cv2.cvtColor(self.cv_image, cv2.COLOR_BGR2GRAY)
-
-        for (arucoName, arucoDict) in self.ARUCO_DICT.items():
-            arucoDict = cv2.aruco.getPredefinedDictionary(arucoDict)
-            arucoParams = cv2.aruco.DetectorParameters()
-
-
-            detector = cv2.aruco.ArucoDetector(arucoDict, arucoParams)
-
-            # Detect markers
-            corners, ids, rejected = detector.detectMarkers(image)
-
-            # verify *at least* one ArUco marker was detected
-            if len(corners) > 0:
-                # flatten the ArUco IDs list
-                ids = ids.flatten()
-
-                # loop over the detected ArUCo corners
-                for (markerCorner, markerID) in zip(corners, ids):
-                    if markerID in range(1, 24): ##checks that the marker id is there #23, 1, 18, 10
-                        ##stop the robot
-                        cmd_vel = Twist()
-                        self.vel_publisher.publish(cmd_vel)
-                        self.get_logger().info("[INFO] ArUco marker ID: {}".format(markerID))
-
-                        self.stop_robot_two = True
-                        ##stop both robots
-                        cmd_vel = Twist() 
-                        self.vel_publisher.publish(cmd_vel)
-                        cmd_vel = Twist() 
-                        self.vel_publisher_two.publish(cmd_vel)
-
-                        ##start the reconstruction of object
-                        self.image_callback_two()
-
-
-
-
     def create_proximity_callback(self, sensor):
         # Create a callback function that has access to both the message and the name of the sensor that sent it
         def proximity_callback(msg):
@@ -204,6 +136,8 @@ class ControllerNode(Node):
             )
             
         return proximity_callback  
+
+
         
     def start(self):
         # Create and immediately start a timer that will regularly publish commands
@@ -222,9 +156,12 @@ class ControllerNode(Node):
         self.odom_valocity = msg.twist.twist
         
         pose2d = self.pose3d_to_2d(self.odom_pose)
+
+        ##storing thymio1 pose
+        self.thymio_one_pose = pose2d 
         
         self.get_logger().info(
-            "odometry: received pose (x: {:.2f}, y: {:.2f}, theta: {:.2f})".format(*pose2d),
+            "odometry for thymio one: received pose (x: {:.2f}, y: {:.2f}, theta: {:.2f})".format(*pose2d),
              throttle_duration_sec=0.5 # Throttle logging frequency to max 2Hz
         )
     
@@ -278,18 +215,25 @@ class ControllerNode(Node):
 
 
 
+        
     def update_callback(self):
+        # t1 = Thread(target= self.moving_robot)
+        # t2 = Thread(target= self.moving_robot_two)
+        # t1.start()
+        # t2.start()
         if self.stop_robot_two == True:
             cmd_vel = Twist() 
             self.vel_publisher.publish(cmd_vel)
             cmd_vel = Twist() 
             self.vel_publisher_two.publish(cmd_vel)
+            self.image_callback_two()
             self.get_logger().info("setting 3D reconstruction of object")
         else:
             self.moving_robot()
             self.get_logger().info("moving the robot one")
             self.moving_robot_two()
             self.get_logger().info("moving the robot two")
+
       
 
     def init_forward(self):
@@ -342,6 +286,7 @@ class ControllerNode(Node):
         self.vel_publisher.publish(cmd_vel)
     
 
+
     ####################################################################
                          #THYMIO TWO
     ####################################################################
@@ -376,15 +321,15 @@ class ControllerNode(Node):
 
         cmd_vel = Twist() 
         cmd_vel.linear.x  =  0.5 * self.distance_bet_thymios
-        cmd_vel.angular.z =  0.6* self.angular_diff ##kept reducing cause it was too big from 6 
+        cmd_vel.angular.z =  -0.6* self.angular_diff ##kept reducing cause it was too big from 6 
         self.vel_publisher_two.publish(cmd_vel)
 
-        # if self.distance_bet_thymios <= 0.1: ## to close
-        #     self.stop_robot_two = True
-        #     cmd_vel = Twist()
-        #     self.vel_publisher_two.publish(cmd_vel)
-        #     cmd_vel = Twist()
-        #     self.vel_publisher.publish(cmd_vel)
+        if self.distance_bet_thymios <= 0.1:
+            self.stop_robot_two = True
+            cmd_vel = Twist()
+            cmd_vel.linear.x = 0.0
+            cmd_vel.angular.z = 0.0
+            self.vel_publisher_two.publish(cmd_vel)
 
 
     def create_point_cloud_from_depth_image(self, depth_image, intrinsic, scale=1.0):
@@ -409,19 +354,9 @@ class ControllerNode(Node):
         return pcd
 
 
-    ##to store the data, so that it image_callback_two is not auto used before needed
-    def store_data_img_callback_two(self, data):
-        self.store_image = data
 
-
-    def image_callback_two(self):
-        if self.store_image is None:
-            self.get_logger().info("image is none")
-            return 
-        self.get_logger().info("the image is not none, reconstruction starting")
-        
-            
-        self.cv_image = self.bridge_two.imgmsg_to_cv2(self.store_image, "bgr8")
+    def image_callback_two(self, data):
+        self.cv_image = self.bridge_two.imgmsg_to_cv2(data, "bgr8")
         #self.get_logger().info(f"{type(self.cv_image), self.cv_image.shape}") #to confirm image type as there was some mismatch
         rgb_image = cv2.cvtColor(self.cv_image, cv2.COLOR_BGR2RGB)
         rgb_image = PILImage.fromarray(rgb_image) ##had to add this or data will be empty when resizing
@@ -495,10 +430,7 @@ class ControllerNode(Node):
 
 
         o3d.io.write_point_cloud("scanRoom/output_point_cloud.ply", pcd)
-
-        self.stop_robot_two = False ##continue moving the robots
     
-
 
 
 def main():
