@@ -14,6 +14,7 @@ Goal Two: When the specific item is found, another mighty thymio creates a 3D re
 
 
 **NOTES** <br>
+•	Use scene in scene/two_thymio.ttt. (code will still work if u remove thymio_1 to test the part of obstacle avoidvance since with both with id detecting, it doesnt work as well to avoid obstacle + can test obstacle avoidance with 2 thymio, just change the location of thymio 1, so that an id is not detected in the camera)
 •	Delete the second mighty thymio from the scene to achieve the first goal. <br>
 •	Add the second mighty thymio back to the scene to achieve the second goal. <br>
 
@@ -56,3 +57,7 @@ pip install transformers <br>
 #### to see the visualisation and camera from the robot pov
 •	ros2 topic list (to see the topics of the robot - thymio_0 and thymio_1) <br>
 •	rqt (change between /thymio_1/camera and /thymio_0/camera)
+
+# Demo:
+[![Watch the video](MapScan/scanRoom/output.png)](https://youtu.be/2K5-N__InQI)
+
