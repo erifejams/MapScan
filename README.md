@@ -16,6 +16,11 @@ Goal Two: When the specific item is found, another mighty thymio creates a 3D re
 •	Delete the second mighty thymio from the scene to achieve the first goal. <br>
 •	Add the second mighty thymio back to the scene to achieve the second goal. <br>
 
+# Additional Installation
+pip install pyrealsense2 open3d <br>
+pip install torch torchvision torchaudio <br>
+pip install transformers <br>
+
 
 # To run 
 ## Terminal #1:
