@@ -68,6 +68,7 @@ class ControllerNode(Node):
         self.cv_image = None
 
         self.stop_robot_two = False
+        self.stop_robot_one = False ##forgot to add
 
         self.odom_subscriber_two = None 
         self.odom_valocity_two = None
@@ -181,6 +182,7 @@ class ControllerNode(Node):
                         self.get_logger().info("[INFO] ArUco marker ID: {}".format(markerID))
 
                         self.stop_robot_two = True
+                        self.stop_robot_one = True
                         ##stop both robots
                         cmd_vel = Twist() 
                         self.vel_publisher.publish(cmd_vel)
@@ -222,6 +224,7 @@ class ControllerNode(Node):
         self.odom_valocity = msg.twist.twist
         
         pose2d = self.pose3d_to_2d(self.odom_pose)
+        self.thymio_one_pose = pose2d
         
         self.get_logger().info(
             "odometry: received pose (x: {:.2f}, y: {:.2f}, theta: {:.2f})".format(*pose2d),
@@ -279,7 +282,7 @@ class ControllerNode(Node):
 
 
     def update_callback(self):
-        if self.stop_robot_two == True:
+        if self.stop_robot_two == True and self.stop_robot_one == True: ##added the stop_robot_one
             cmd_vel = Twist() 
             self.vel_publisher.publish(cmd_vel)
             cmd_vel = Twist() 
@@ -489,7 +492,7 @@ class ControllerNode(Node):
             cy=cy
         )
 
-        
+
         cmd_vel = Twist() 
         self.vel_publisher.publish(cmd_vel)
         cmd_vel = Twist() 
@@ -507,6 +510,7 @@ class ControllerNode(Node):
         o3d.io.write_point_cloud("scanRoom/output_point_cloud.ply", pcd)
 
         self.stop_robot_two = False ##continue moving the robots
+        self.stop_robot_one = False
     
 
 
